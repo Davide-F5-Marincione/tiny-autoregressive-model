@@ -13,9 +13,9 @@ class BinaryEmbeddings:
         
     def select(self, indices: List[int]) -> BinMatrix:
         selected = BinMatrix(len(indices), self.embedding_dim)
-        actual_cols = (self.embedding_dim >> 3) + ((self.embedding_dim & 8) > 0)
+        actual_cols = (self.embedding_dim >> 3) + ((self.embedding_dim % 8) > 0)
         for i, idx in enumerate(indices):
-            for j in range((self.embedding_dim >> 3) + ((self.embedding_dim & 8) > 0)):
+            for j in range((self.embedding_dim >> 3) + ((self.embedding_dim % 8) > 0)):
                 selected.data[i * actual_cols + j] = self.embeddings.data[idx * actual_cols + j]
         return selected
     
@@ -280,7 +280,8 @@ if __name__ == "__main__":
     random.seed(42)
     np.random.seed(42)
 
-    MAX_LEN = 32
+    MAX_LEN = 256
+    EPOCHS = 10
     # Create a vocabulary mapping for lowercase letters, space, and period
 
     VOCAB = {
@@ -289,7 +290,9 @@ if __name__ == "__main__":
     INVERSE_VOCAB = {v: k for k, v in VOCAB.items()}
     VOCAB_SIZE = len(VOCAB)
 
-    model = BinaryMamba(vocab_size=VOCAB_SIZE, d_model=16)
+    print(f"Vocabulary size: {VOCAB_SIZE}")
+
+    model = BinaryMamba(vocab_size=VOCAB_SIZE, d_model=8)
     params_to_optimize = {
         'u_projs': model.u_projs_float,
         'deltas': model.deltas_float,
@@ -299,26 +302,23 @@ if __name__ == "__main__":
     }
     optimizer = AdamOptimizer(params_to_optimize, lr=4e-3, weight_decay=0.0, weight_clip=2)
 
-    samples = []
     # with open('text.txt', 'r') as f:
-    #     sample = ""
-    #     for line in f:
-    #         line = line.strip()
-    #         if not line:
-    #             if sample:
-    #                 samples.append(sample)
-    #                 sample = ""
-    #         else:
-    #             sample += ' ' + line
+    #     samples = f.read().splitlines(keepends=True)
+    #     for sample in samples:
+    #         if sample[-1] not in ".!?":
+    #             sample += '.'
     with open('human_names.txt', 'r') as f:
         samples = f.read().splitlines(keepends=True)
     data_gen = DataGenerator(samples, VOCAB, max_len=MAX_LEN, batch_size=32, shuffle=True)
 
 
     lr_schedule = lambda epoch: 1e-2 * (0.9 ** (epoch // 2))  # Decrease learning rate every 2 epochs
-    for i in range(10):
-        print(f"Epoch {i+1}/10")
+    for i in range(EPOCHS):
+        print(f"Epoch {i+1}/{EPOCHS}, lr= {lr_schedule(i):.6f}")
         optimizer.lr = lr_schedule(i)
+        if optimizer.lr < 1e-5:
+            print("Stopping training due to low learning rate.")
+            break
         for batch in (pbar:=tqdm.tqdm(data_gen, total=len(samples)//32 + 1, desc="Training")):
             loss, grads = model.train(batch)
             optimizer.step(grads)
@@ -326,4 +326,4 @@ if __name__ == "__main__":
             pbar.set_postfix(loss=loss)
 
     # Save
-    model.save('binary_mamba16_10epochs.tiny')
+    model.save(f'binary_mamba8_{EPOCHS}epochs_ff.tiny')
