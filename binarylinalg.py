@@ -164,26 +164,12 @@ def float2bin(float_matrix: np.ndarray) -> BinMatrix:
     return binary_matrix
     
 if __name__ == "__main__":
-
-    # Matrix multiplication: y = x @ A
-    # grad_A = x^T @ grad_y
-    # grad_x = grad_y @ A^T
-    # 
-
     x = BinMatrix(2, 16).randomize()
     A = BinMatrix(16, 16).randomize()
-    # print("Matrix x:")
-    # print(x)
+    print("Matrix x:")
+    print(x)
     print("Matrix A:")
     print(A)
     y = x.matmul_no_bin(A)
-    # print("Result of A * B:")
-    # print(y)
-
-    grad_y = 100 * np.random.randn(2, 16).astype(np.float32)
-
-    grad_A = bin2float(x).T @ grad_y
-    
-    A = grad_update(A, grad_A, learning_rate=0.01)
-    print("Updated Matrix A:")
-    print(A)
+    print("Result of A * B:")
+    print(y)
