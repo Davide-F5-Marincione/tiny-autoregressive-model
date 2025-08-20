@@ -314,38 +314,16 @@ if __name__ == "__main__":
         samples = f.read().splitlines(keepends=True)
     data_gen = DataGenerator(samples, VOCAB, max_len=MAX_LEN, batch_size=32, shuffle=True)
 
-    for batch in (pbar:=tqdm.tqdm(data_gen, total=len(samples)//32 + 1, desc="Training")):
-        loss, grads = model.train(batch)
-        optimizer.step(grads)
-        model.binarize_weights()
-        pbar.set_postfix(loss=loss)
+
+    lr_schedule = lambda epoch: 1e-2 * (0.9 ** (epoch // 2))  # Decrease learning rate every 2 epochs
+    for i in range(10):
+        print(f"Epoch {i+1}/10")
+        optimizer.lr = lr_schedule(i)
+        for batch in (pbar:=tqdm.tqdm(data_gen, total=len(samples)//32 + 1, desc="Training")):
+            loss, grads = model.train(batch)
+            optimizer.step(grads)
+            model.binarize_weights()
+            pbar.set_postfix(loss=loss)
 
     # Save
-    model.save('binary_mamba16.tiny')
-
-    state = None
-    prompt = 'al'
-    for char in prompt[:-1]:
-        _, state = model.step([VOCAB[char]], state)
-
-    last_index = VOCAB[prompt[-1]]    
-    print(prompt, end='', flush=True)
-    
-    for _ in range(MAX_LEN):
-        output, state = model.step([last_index], state)
-        output = output.data
-        m = min(output)
-        output = [o - m for o in output]
-        outsum = sum(output)
-        random_choice = random.randint(0, 2**12) % outsum
-        j = 0
-        while random_choice > output[j]:
-            random_choice -= output[j]
-            j += 1
-        result = INVERSE_VOCAB[j]
-        
-        last_index = j
-        
-        print(result, end='', flush=True)
-        
-        prompt += result
+    model.save('binary_mamba16_10epochs.tiny')

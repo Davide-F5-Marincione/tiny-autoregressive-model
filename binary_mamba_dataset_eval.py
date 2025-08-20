@@ -1,15 +1,9 @@
-import random
-from typing import List
 import tqdm
 
 from binary_mamba import *
 
 
 if __name__ == "__main__":
-    random.seed(42)
-    np.random.seed(42)
-
-    MAX_LEN = 32
     # Create a vocabulary mapping for lowercase letters, space, and period
 
     VOCAB = {
@@ -19,19 +13,10 @@ if __name__ == "__main__":
     VOCAB_SIZE = len(VOCAB)
 
     model = BinaryMamba(vocab_size=VOCAB_SIZE, d_model=16)
-    model.load('binary_mamba16.tiny')
+    model.load('binary_mamba16_10epochs.tiny')
 
     samples = []
-    # with open('text.txt', 'r') as f:
-    #     sample = ""
-    #     for line in f:
-    #         line = line.strip()
-    #         if not line:
-    #             if sample:
-    #                 samples.append(sample)
-    #                 sample = ""
-    #         else:
-    #             sample += ' ' + line
+
     with open('human_names.txt', 'r') as f:
         samples = f.read().splitlines(keepends=True)
 
