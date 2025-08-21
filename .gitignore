@@ -19,3 +19,4 @@ ff1/asm/bin
 ff1/asm/dat
 
 *.nes
+*.pyc
