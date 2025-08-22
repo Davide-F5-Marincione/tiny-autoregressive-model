@@ -21,7 +21,7 @@ class BinaryEmbeddings:
     
 
 class AdamOptimizer:
-    def __init__(self, params, lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, weight_decay=0.01, weight_clip=2):
+    def __init__(self, params, lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, weight_decay=0.01, weight_clip=None):
         self.params = params  # A list or dict of your model's parameters
         self.lr = lr
         self.beta1 = beta1
@@ -53,7 +53,13 @@ class AdamOptimizer:
                 
                 # 3. Update parameters
                 update_value = self.lr * m_hat / (np.sqrt(v_hat) + self.epsilon)
-                param[...] =np.clip(param - update_value - param * self.weight_decay, -self.weight_clip, self.weight_clip) # This updates the parameter in place
+                param[...] =param - update_value - param * self.weight_decay # This updates the parameter in place
+                if self.weight_clip is not None:
+                    param[...] = np.clip(param, -self.weight_clip, self.weight_clip)
+
+def spectral_normalize(M, eps=1e-6):
+    u, s, vT = np.linalg.svd(M, full_matrices=False)
+    return M / (s[0] + eps)
 
 class BinaryMamba:
     def __init__(self, vocab_size=256, d_model=16):
@@ -93,6 +99,7 @@ class BinaryMamba:
         
         for i in range(state.data.__len__()):
             state.data[i] = max(min((((decay_logit.data[i] + self.d_model) * (state.data[i] - state_proposal.data[i])) // (2 * self.d_model)) + state_proposal.data[i], self.d_model), -self.d_model)
+
 
         y_t = state.binarize().matmul_other_T_no_bin(self.Bt.transpose()).add(u_proj.matmul_other_T_no_bin(self.Dt)).binarize()
 
@@ -207,7 +214,6 @@ class BinaryMamba:
         self.deltas.embeddings = float2bin(self.deltas_float)
         self.At = float2bin(self.At_float)
         self.Bt = float2bin(self.Bt_float)
-        # self.C = float2bin(self.C_float)
         self.Dt = float2bin(self.Dt_float)
     
     def save(self, path):
@@ -292,7 +298,7 @@ if __name__ == "__main__":
 
     print(f"Vocabulary size: {VOCAB_SIZE}")
 
-    model = BinaryMamba(vocab_size=VOCAB_SIZE, d_model=8)
+    model = BinaryMamba(vocab_size=VOCAB_SIZE, d_model=32)
     params_to_optimize = {
         'u_projs': model.u_projs_float,
         'deltas': model.deltas_float,
@@ -300,7 +306,7 @@ if __name__ == "__main__":
         'Bt': model.Bt_float,
         'Dt': model.Dt_float,
     }
-    optimizer = AdamOptimizer(params_to_optimize, lr=4e-3, weight_decay=0.0, weight_clip=2)
+    optimizer = AdamOptimizer(params_to_optimize, lr=4e-3, weight_decay=0.0, weight_clip=1)
 
     # with open('text.txt', 'r') as f:
     #     samples = f.read().splitlines(keepends=True)
@@ -326,4 +332,4 @@ if __name__ == "__main__":
             pbar.set_postfix(loss=loss)
 
     # Save
-    model.save(f'binary_mamba8_{EPOCHS}epochs_ff.tiny')
+    model.save(f'binary_mamba32_{EPOCHS}epochs.tiny')
