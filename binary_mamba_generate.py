@@ -6,7 +6,7 @@ if __name__ == "__main__":
     beam_width = 5
     max_length = 20
     temp = 1  # Temperature for softmax scaling
-    end_bias = lambda x: len(x) * 0.1  # Bias for end token based on sequence length
+    end_bias = lambda x: len(x) * 1e-2  # Bias for end token based on sequence length
     repetition_penalty = 1.2  # Penalty for repeated tokens
     prompt = "m"
 
@@ -16,29 +16,30 @@ if __name__ == "__main__":
     INVERSE_VOCAB = {v: k for k, v in VOCAB.items()}
     VOCAB_SIZE = len(VOCAB)
 
+    print(f"Vocabulary size: {VOCAB_SIZE}")
     model = BinaryMamba(vocab_size=VOCAB_SIZE, d_model=16)
     model.load('binary_mamba16_10epochs.tiny')
 
-    # Greedy search initialization
-    state = None
-    result = prompt
-    while result[-1] != '\n' and len(result) < max_length:
-        last_index = VOCAB[result[-1]]
-        output, state = model.step([last_index], state)
-        output = np.array(output.data)
-        output = output / temp
-        output = np.exp(output - np.max(output))
-        output[VOCAB['\n']] += end_bias(result)
-        output[VOCAB[result[-1]]] /= repetition_penalty
-        output = output / np.sum(output)
+    # # Greedy search initialization
+    # state = None
+    # result = prompt
+    # while result[-1] != '\n' and len(result) < max_length:
+    #     last_index = VOCAB[result[-1]]
+    #     output, state = model.step([last_index], state)
+    #     output = np.array(output.data)
+    #     output = output / temp
+    #     output = np.exp(output - np.max(output))
+    #     output[VOCAB['\n']] += end_bias(result)
+    #     output[VOCAB[result[-1]]] /= repetition_penalty
+    #     output = output / np.sum(output)
 
-        next_index = np.random.choice(
-            range(VOCAB_SIZE), p=output
-        )
-        result += INVERSE_VOCAB[next_index]
+    #     next_index = np.random.choice(
+    #         range(VOCAB_SIZE), p=output
+    #     )
+    #     result += INVERSE_VOCAB[next_index]
 
-    result = result.strip()
-    print(f"Greedy search result: {result}")
+    # result = result.strip()
+    # print(f"Greedy search result: {result}")
 
     # Beam search initialization
     beams = [(prompt, 0.0, None)]  # (sequence, score, state)

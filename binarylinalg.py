@@ -77,25 +77,6 @@ class BinMatrix(DataHolder):
                 bit = (self.data[r * actual_cols + (c >> 3)] >> (c % 8)) & 0x1
                 transposed.data[c * actual_rows + (r >> 3)] |= bit << (r % 8)
         return transposed
-    
-    # def matmul(self, other: 'BinMatrix') -> 'BinMatrix':
-    #     return self.matmul_other_T(other.transpose())
-    
-    # def matmul_other_T(self, other: 'BinMatrix') -> 'BinMatrix':
-    #     assert self.cols == other.cols, "Incompatible dimensions for matrix multiplication."
-    #     result = BinMatrix(self.rows, other.rows)
-    #     actual_cols = (self.cols >> 3) + ((self.cols % 8) > 0)
-    #     actual_res_cols = (other.rows >> 3) + ((other.rows % 8) > 0)
-    #     for r in range(self.rows):
-    #         for c in range(other.rows):
-    #             row_sum = 0
-    #             for k in range(actual_cols):
-    #                 xor_mul = self.data[r * actual_cols + k] ^ other.data[c * actual_cols + k]
-    #                 if k == actual_cols - 1 and self.cols % 8 > 0:
-    #                     xor_mul &= (1 << (self.cols % 8)) - 1
-    #                 row_sum += popcount(xor_mul)
-    #             result.data[r * actual_res_cols + (c >> 3)] |= (row_sum >= (self.cols >> 1)) << (c % 8)
-    #     return result
 
     def matmul_no_bin(self, B: 'BinMatrix') -> ByteMatrix:
         return self.matmul_other_T_no_bin(B.transpose())
